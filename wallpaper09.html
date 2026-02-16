@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fire and Smoke Simulation Wallpaper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        
+        .info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .controls button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px 0;
+            font-size: 11px;
+            transition: all 0.3s ease;
+            display: block;
+            width: 100%;
+        }
+        
+        .controls button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .controls button.active {
+            background: rgba(255, 100, 100, 0.4);
+            border-color: rgba(255, 100, 100, 0.6);
+        }
+        
+        .stats {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 10px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <div>Fire & Smoke Simulation</div>
+        <div>Click and drag to create fire</div>
+        <div>Hold SHIFT for intense flames</div>
+    </div>
+    
+    <div class="controls">
+        <button id="windBtn">Wind Effect</button>
+        <button id="intenseBtn">Intense Mode</button>
+        <button id="embersBtn">Flying Embers</button>
+    </div>
+    
+    <div class="stats">
+        <div>Particles: <span id="particleCount">0</span></div>
+        <div>Fire Sources: <span id="fireCount">0</span></div>
+        <div>Temperature: <span id="temperature">Normal</span></div>
+    </div>
+    
+    <canvas id="fireCanvas"></canvas>
+    
+    <script>
+        class FireParticle {
+            constructor(x, y, intensity = 1) {
+                this.x = x + (Math.random() - 0.5) * 20;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = -Math.random() * 3 - 2;
+                this.life = 1.0;
+                this.decay = Math.random() * 0.02 + 0.01;
+                this.size = Math.random() * 4 + 2;
+                this.intensity = intensity;
+                this.type = 'fire';
+                this.hue = 15 + Math.random() * 30; // Orange/red
+                this.turbulence = Math.random() * 0.1;
+            }
+            
+            update(windX, windY) {
+                // Update position
+                this.vx += windX + (Math.random() - 0.5) * this.turbulence;
+                this.vy += windY - 0.05; // Buoyancy
+                
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // Update life
+                this.life -= this.decay * this.intensity;
+                
+                // Update size
+                this.size *= 0.99;
+                
+                // Update hue (cooling effect)
+                this.hue += 0.5;
+                if (this.hue > 60) {
+                    this.type = 'smoke';
+                    this.hue = 200; // Blue/gray for smoke
+                }
+            }
+            
+            draw(ctx) {
+                const alpha = this.life * (this.type === 'fire' ? 0.8 : 0.4);
+                const size = this.size * (this.type === 'fire' ? 1 : 0.5);
+                
+                if (this.type === 'fire') {
+                    // Fire glow
+                    const glowGradient = ctx.createRadialGradient(
+                        this.x, this.y, 0,
+                        this.x, this.y, size * 3
+                    );
+                    glowGradient.addColorStop(0, `hsla(${this.hue}, 100%, 60%, ${alpha * 0.5})`);
+                    glowGradient.addColorStop(0.5, `hsla(${this.hue}, 100%, 50%, ${alpha * 0.3})`);
+                    glowGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                    
+                    ctx.fillStyle = glowGradient;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, size * 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Fire core
+                    ctx.fillStyle = `hsla(${this.hue}, 100%, 70%, ${alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Smoke
+                    ctx.fillStyle = `hsla(${this.hue}, 20%, 60%, ${alpha * 0.3})`;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            
+            isAlive() {
+                return this.life > 0 && this.size > 0.5;
+            }
+        }
+        
+        class EmberParticle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = -Math.random() * 5 - 3;
+                this.life = 1.0;
+                this.decay = Math.random() * 0.01 + 0.005;
+                this.size = Math.random() * 2 + 1;
+                this.glowIntensity = Math.random() * 0.5 + 0.5;
+            }
+            
+            update(windX, windY) {
+                this.vx += windX * 0.5;
+                this.vy += windY * 0.3 - 0.1; // Less buoyancy than fire
+                
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                this.life -= this.decay;
+                this.glowIntensity *= 0.98;
+            }
+            
+            draw(ctx) {
+                const alpha = this.life * this.glowIntensity;
+                
+                // Ember glow
+                const glowGradient = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, this.size * 4
+                );
+                glowGradient.addColorStop(0, `rgba(255, 150, 0, ${alpha})`);
+                glowGradient.addColorStop(0.5, `rgba(255, 100, 0, ${alpha * 0.5})`);
+                glowGradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
+                
+                ctx.fillStyle = glowGradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Ember core
+                ctx.fillStyle = `rgba(255, 200, 100, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            isAlive() {
+                return this.life > 0;
+            }
+        }
+        
+        class FireSource {
+            constructor(x, y, intensity = 1) {
+                this.x = x;
+                this.y = y;
+                this.intensity = intensity;
+                this.life = 300; // 5 seconds at 60fps
+                this.maxLife = this.life;
+                this.particleTimer = 0;
+            }
+            
+            update() {
+                this.life--;
+                this.particleTimer++;
+                
+                // Vary intensity slightly
+                this.intensity += (Math.random() - 0.5) * 0.1;
+                this.intensity = Math.max(0.5, Math.min(2, this.intensity));
+            }
+            
+            shouldEmitParticle() {
+                return this.particleTimer % Math.max(1, 3 - Math.floor(this.intensity)) === 0;
+            }
+            
+            getIntensity() {
+                return this.intensity * (this.life / this.maxLife);
+            }
+            
+            isAlive() {
+                return this.life > 0;
+            }
+        }
+        
+        class FireSimulation {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.embers = [];
+                this.fireSources = [];
+                this.windX = 0;
+                this.windY = 0;
+                this.windEffect = false;
+                this.intenseMode = false;
+                this.emberMode = false;
+                this.mouseDown = false;
+                this.mouseX = 0;
+                this.mouseY = 0;
+                
+                this.setupControls();
+                this.updateStats();
+            }
+            
+            setupControls() {
+                document.getElementById('windBtn').addEventListener('click', (e) => {
+                    this.windEffect = !this.windEffect;
+                    e.target.classList.toggle('active');
+                });
+                
+                document.getElementById('intenseBtn').addEventListener('click', (e) => {
+                    this.intenseMode = !this.intenseMode;
+                    e.target.classList.toggle('active');
+                });
+                
+                document.getElementById('embersBtn').addEventListener('click', (e) => {
+                    this.emberMode = !this.emberMode;
+                    e.target.classList.toggle('active');
+                });
+            }
+            
+            addFireSource(x, y, intensity = 1) {
+                this.fireSources.push(new FireSource(x, y, intensity));
+                this.updateStats();
+            }
+            
+            update() {
+                // Update wind
+                if (this.windEffect) {
+                    this.windX = Math.sin(Date.now() * 0.001) * 0.1;
+                    this.windY = Math.cos(Date.now() * 0.0015) * 0.05;
+                }
+                
+                // Update fire sources
+                this.fireSources.forEach(source => source.update());
+                
+                // Emit particles from fire sources
+                this.fireSources.forEach(source => {
+                    if (source.shouldEmitParticle()) {
+                        const intensity = source.getIntensity();
+                        this.particles.push(new FireParticle(source.x, source.y, intensity));
+                        
+                        // Emit embers occasionally
+                        if (this.emberMode && Math.random() < 0.1 * intensity) {
+                            this.embers.push(new EmberParticle(source.x, source.y));
+                        }
+                    }
+                });
+                
+                // Update particles
+                this.particles.forEach(particle => {
+                    particle.update(this.windX, this.windY);
+                });
+                
+                this.embers.forEach(ember => {
+                    ember.update(this.windX, this.windY);
+                });
+                
+                // Remove dead particles
+                this.particles = this.particles.filter(p => p.isAlive());
+                this.embers = this.embers.filter(e => e.isAlive());
+                this.fireSources = this.fireSources.filter(s => s.isAlive());
+                
+                // Add mouse fire source
+                if (this.mouseDown) {
+                    this.addFireSource(this.mouseX, this.mouseY, this.intenseMode ? 2 : 1);
+                }
+                
+                this.updateStats();
+            }
+            
+            updateStats() {
+                document.getElementById('particleCount').textContent = 
+                    this.particles.length + this.embers.length;
+                document.getElementById('fireCount').textContent = this.fireSources.length;
+                
+                const temp = this.fireSources.length > 5 ? 'Hot' : 
+                           this.fireSources.length > 2 ? 'Warm' : 'Normal';
+                document.getElementById('temperature').textContent = temp;
+            }
+            
+            draw() {
+                // Clear with dark background
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw particles (back to front)
+                this.particles.forEach(particle => {
+                    particle.draw(this.ctx);
+                });
+                
+                this.embers.forEach(ember => {
+                    ember.draw(this.ctx);
+                });
+            }
+        }
+        
+        const canvas = document.getElementById('fireCanvas');
+        const ctx = canvas.getContext('2d');
+        let fireSimulation;
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        function animate() {
+            fireSimulation.update();
+            fireSimulation.draw();
+            requestAnimationFrame(animate);
+        }
+        
+        // Event listeners
+        window.addEventListener('resize', resizeCanvas);
+        
+        canvas.addEventListener('mousedown', (e) => {
+            fireSimulation.mouseDown = true;
+            fireSimulation.mouseX = e.clientX;
+            fireSimulation.mouseY = e.clientY;
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            fireSimulation.mouseX = e.clientX;
+            fireSimulation.mouseY = e.clientY;
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            fireSimulation.mouseDown = false;
+        });
+        
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            fireSimulation.mouseDown = true;
+            fireSimulation.mouseX = e.touches[0].clientX;
+            fireSimulation.mouseY = e.touches[0].clientY;
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            fireSimulation.mouseX = e.touches[0].clientX;
+            fireSimulation.mouseY = e.touches[0].clientY;
+        });
+        
+        canvas.addEventListener('touchend', () => {
+            fireSimulation.mouseDown = false;
+        });
+        
+        // Initialize
+        resizeCanvas();
+        fireSimulation = new FireSimulation(canvas);
+        animate();
+    </script>
+</body>
+</html>

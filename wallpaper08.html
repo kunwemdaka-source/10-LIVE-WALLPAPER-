@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Network Visualization Wallpaper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow: hidden;
+            background: radial-gradient(ellipse at center, #0f0f1f 0%, #000000 100%);
+            font-family: 'Arial', sans-serif;
+        }
+        
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        
+        .info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .controls button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px 0;
+            font-size: 11px;
+            transition: all 0.3s ease;
+            display: block;
+            width: 100%;
+        }
+        
+        .controls button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .controls button.active {
+            background: rgba(100, 200, 255, 0.4);
+            border-color: rgba(100, 200, 255, 0.6);
+        }
+        
+        .stats {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 10px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <div>Neural Network Visualization</div>
+        <div>Click nodes to activate signals</div>
+        <div>Move mouse to attract neurons</div>
+    </div>
+    
+    <div class="controls">
+        <button id="pulseBtn">Auto Pulse</button>
+        <button id="resetBtn">Reset Network</button>
+        <button id="densityBtn">High Density</button>
+    </div>
+    
+    <div class="stats">
+        <div>Nodes: <span id="nodeCount">0</span></div>
+        <div>Connections: <span id="connectionCount">0</span></div>
+        <div>Active Signals: <span id="signalCount">0</span></div>
+    </div>
+    
+    <canvas id="neuralCanvas"></canvas>
+    
+    <script>
+        class Neuron {
+            constructor(x, y, layer) {
+                this.x = x;
+                this.y = y;
+                this.originalX = x;
+                this.originalY = y;
+                this.layer = layer;
+                
+                this.radius = Math.random() * 3 + 2;
+                this.pulse = Math.random() * Math.PI * 2;
+                this.pulseSpeed = Math.random() * 0.02 + 0.01;
+                
+                this.activation = 0;
+                this.targetActivation = 0;
+                this.decay = 0.95;
+                
+                this.hue = 200 + layer * 30;
+                this.connections = [];
+                this.active = false;
+                
+                this.vx = 0;
+                this.vy = 0;
+                this.mass = 1;
+            }
+            
+            update(mouseX, mouseY, time) {
+                // Update pulse
+                this.pulse += this.pulseSpeed;
+                
+                // Update activation
+                this.activation *= this.decay;
+                this.activation += (this.targetActivation - this.activation) * 0.1;
+                this.targetActivation *= 0.99;
+                
+                // Mouse attraction
+                const dx = mouseX - this.x;
+                const dy = mouseY - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 150 && distance > 0) {
+                    const force = (150 - distance) / 150 * 0.5;
+                    this.vx += (dx / distance) * force;
+                    this.vy += (dy / distance) * force;
+                }
+                
+                // Return to original position
+                const returnDx = this.originalX - this.x;
+                const returnDy = this.originalY - this.y;
+                this.vx += returnDx * 0.02;
+                this.vy += returnDy * 0.02;
+                
+                // Apply velocity
+                this.vx *= 0.95; // Friction
+                this.vy *= 0.95;
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // Update connections
+                this.connections.forEach(conn => {
+                    if (conn.signal > 0) {
+                        conn.signal -= 0.02;
+                        if (conn.signal <= 0) {
+                            conn.signal = 0;
+                            // Propagate to connected neuron
+                            if (conn.to && Math.random() < 0.7) {
+                                conn.to.targetActivation = Math.min(1, conn.to.targetActivation + 0.3);
+                            }
+                        }
+                    }
+                });
+            }
+            
+            activate() {
+                this.targetActivation = 1;
+                this.active = true;
+                
+                // Activate connections
+                this.connections.forEach(conn => {
+                    if (Math.random() < 0.8) {
+                        conn.signal = 1;
+                    }
+                });
+            }
+            
+            isClicked(x, y) {
+                const dx = x - this.x;
+                const dy = y - this.y;
+                return Math.sqrt(dx * dx + dy * dy) < this.radius + 5;
+            }
+            
+            draw(ctx, time) {
+                // Update color based on activation
+                const currentHue = this.hue + this.activation * 60;
+                const currentRadius = this.radius + Math.sin(this.pulse) * 1 + this.activation * 3;
+                const alpha = 0.6 + this.activation * 0.4;
+                
+                // Draw glow
+                if (this.activation > 0.1) {
+                    const glowGradient = ctx.createRadialGradient(
+                        this.x, this.y, 0,
+                        this.x, this.y, currentRadius * 3
+                    );
+                    glowGradient.addColorStop(0, `hsla(${currentHue}, 80%, 60%, ${alpha * 0.5})`);
+                    glowGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                    
+                    ctx.fillStyle = glowGradient;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, currentRadius * 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Draw neuron
+                ctx.fillStyle = `hsla(${currentHue}, 80%, 60%, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, currentRadius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw inner core
+                ctx.fillStyle = `hsla(${currentHue}, 80%, 80%, ${alpha * 0.8})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, currentRadius * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        class Connection {
+            constructor(from, to) {
+                this.from = from;
+                this.to = to;
+                this.signal = 0;
+                this.strength = Math.random() * 0.5 + 0.5;
+                this.pulse = Math.random() * Math.PI * 2;
+            }
+            
+            update() {
+                this.pulse += 0.02;
+            }
+            
+            draw(ctx) {
+                const dx = this.to.x - this.from.x;
+                const dy = this.to.y - this.from.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance === 0) return;
+                
+                // Calculate alpha based on distance and signal
+                let alpha = Math.max(0.1, 1 - distance / 200) * this.strength;
+                if (this.signal > 0) {
+                    alpha = Math.min(1, alpha + this.signal);
+                }
+                
+                // Draw connection line
+                const gradient = ctx.createLinearGradient(
+                    this.from.x, this.from.y,
+                    this.to.x, this.to.y
+                );
+                
+                const hue = 200 + this.signal * 60;
+                gradient.addColorStop(0, `hsla(${hue}, 70%, 50%, ${alpha * 0.5})`);
+                gradient.addColorStop(1, `hsla(${hue}, 70%, 50%, ${alpha * 0.3})`);
+                
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 1 + this.signal * 2;
+                ctx.beginPath();
+                ctx.moveTo(this.from.x, this.from.y);
+                ctx.lineTo(this.to.x, this.to.y);
+                ctx.stroke();
+                
+                // Draw signal traveling along connection
+                if (this.signal > 0) {
+                    const signalX = this.from.x + dx * (1 - this.signal);
+                    const signalY = this.from.y + dy * (1 - this.signal);
+                    
+                    ctx.fillStyle = `hsla(${hue}, 80%, 70%, ${this.signal})`;
+                    ctx.beginPath();
+                    ctx.arc(signalX, signalY, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+        
+        class NeuralNetwork {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.neurons = [];
+                this.connections = [];
+                this.time = 0;
+                this.autoPulse = false;
+                this.highDensity = false;
+                
+                this.setupControls();
+                this.generateNetwork();
+            }
+            
+            setupControls() {
+                document.getElementById('pulseBtn').addEventListener('click', (e) => {
+                    this.autoPulse = !this.autoPulse;
+                    e.target.classList.toggle('active');
+                    e.target.textContent = this.autoPulse ? 'Stop Pulse' : 'Auto Pulse';
+                });
+                
+                document.getElementById('resetBtn').addEventListener('click', () => {
+                    this.generateNetwork();
+                });
+                
+                document.getElementById('densityBtn').addEventListener('click', (e) => {
+                    this.highDensity = !this.highDensity;
+                    e.target.classList.toggle('active');
+                    e.target.textContent = this.highDensity ? 'Low Density' : 'High Density';
+                    this.generateNetwork();
+                });
+            }
+            
+            generateNetwork() {
+                this.neurons = [];
+                this.connections = [];
+                
+                const layers = this.highDensity ? 6 : 4;
+                const neuronsPerLayer = this.highDensity ? 8 : 6;
+                const layerSpacing = this.canvas.width / (layers + 1);
+                const neuronSpacing = this.canvas.height / (neuronsPerLayer + 1);
+                
+                // Create neurons
+                for (let layer = 0; layer < layers; layer++) {
+                    const x = layerSpacing * (layer + 1);
+                    const neuronCount = neuronsPerLayer + Math.floor(Math.random() * 3) - 1;
+                    
+                    for (let i = 0; i < neuronCount; i++) {
+                        const y = neuronSpacing * (i + 1) + (Math.random() - 0.5) * 30;
+                        const neuron = new Neuron(x, y, layer);
+                        this.neurons.push(neuron);
+                    }
+                }
+                
+                // Create connections
+                for (let i = 0; i < this.neurons.length; i++) {
+                    const neuron = this.neurons[i];
+                    
+                    // Connect to neurons in next layer
+                    for (let j = 0; j < this.neurons.length; j++) {
+                        const other = this.neurons[j];
+                        if (other.layer === neuron.layer + 1) {
+                            const dx = other.x - neuron.x;
+                            const dy = other.y - neuron.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < 150 && Math.random() < 0.7) {
+                                const connection = new Connection(neuron, other);
+                                neuron.connections.push(connection);
+                                this.connections.push(connection);
+                            }
+                        }
+                    }
+                }
+                
+                this.updateStats();
+            }
+            
+            updateStats() {
+                document.getElementById('nodeCount').textContent = this.neurons.length;
+                document.getElementById('connectionCount').textContent = this.connections.length;
+                document.getElementById('signalCount').textContent = 
+                    this.connections.filter(c => c.signal > 0).length;
+            }
+            
+            update(mouseX, mouseY) {
+                this.time++;
+                
+                // Update neurons
+                this.neurons.forEach(neuron => {
+                    neuron.update(mouseX, mouseY, this.time);
+                });
+                
+                // Update connections
+                this.connections.forEach(connection => {
+                    connection.update();
+                });
+                
+                // Auto pulse
+                if (this.autoPulse && this.time % 120 === 0) {
+                    const randomNeuron = this.neurons[Math.floor(Math.random() * this.neurons.length)];
+                    randomNeuron.activate();
+                }
+                
+                this.updateStats();
+            }
+            
+            handleClick(x, y) {
+                // Find clicked neuron
+                for (let neuron of this.neurons) {
+                    if (neuron.isClicked(x, y)) {
+                        neuron.activate();
+                        return true;
+                    }
+                }
+                return false;
+            }
+            
+            draw() {
+                // Clear background
+                const gradient = this.ctx.createRadialGradient(
+                    this.canvas.width / 2, this.canvas.height / 2, 0,
+                    this.canvas.width / 2, this.canvas.height / 2, Math.max(this.canvas.width, this.canvas.height)
+                );
+                gradient.addColorStop(0, '#1a1a2e');
+                gradient.addColorStop(0.5, '#16213e');
+                gradient.addColorStop(1, '#0f0f1f');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw connections first (behind neurons)
+                this.connections.forEach(connection => {
+                    connection.draw(this.ctx);
+                });
+                
+                // Draw neurons
+                this.neurons.forEach(neuron => {
+                    neuron.draw(this.ctx, this.time);
+                });
+            }
+        }
+        
+        const canvas = document.getElementById('neuralCanvas');
+        const ctx = canvas.getContext('2d');
+        let neuralNetwork;
+        let mouseX = 0;
+        let mouseY = 0;
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if (neuralNetwork) {
+                neuralNetwork.generateNetwork();
+            }
+        }
+        
+        function animate() {
+            neuralNetwork.update(mouseX, mouseY);
+            neuralNetwork.draw();
+            requestAnimationFrame(animate);
+        }
+        
+        // Event listeners
+        window.addEventListener('resize', resizeCanvas);
+        
+        canvas.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+        
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            neuralNetwork.handleClick(x, y);
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            mouseX = e.touches[0].clientX;
+            mouseY = e.touches[0].clientY;
+        });
+        
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const x = e.touches[0].clientX - rect.left;
+            const y = e.touches[0].clientY - rect.top;
+            neuralNetwork.handleClick(x, y);
+        });
+        
+        // Initialize
+        resizeCanvas();
+        neuralNetwork = new NeuralNetwork(canvas);
+        animate();
+    </script>
+</body>
+</html>

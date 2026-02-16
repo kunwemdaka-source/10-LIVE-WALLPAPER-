@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liquid Metal Wallpaper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        canvas {
+            display: block;
+            cursor: grab;
+        }
+        
+        canvas:active {
+            cursor: grabbing;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .controls button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px 0;
+            font-size: 11px;
+            transition: all 0.3s ease;
+        }
+        
+        .controls button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .controls button.active {
+            background: rgba(100, 200, 255, 0.4);
+            border-color: rgba(100, 200, 255, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <div>Click and drag to create ripples</div>
+        <div style="margin-top: 10px;">
+            <button id="micBtn">🎤 Enable Audio</button>
+        </div>
+    </div>
+    <canvas id="metalCanvas"></canvas>
+    
+    <script>
+        class LiquidMetal {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.width = canvas.width;
+                this.height = canvas.height;
+                this.time = 0;
+                this.ripples = [];
+                this.audioEnabled = false;
+                this.audioContext = null;
+                this.analyser = null;
+                this.dataArray = null;
+                
+                this.initAudio();
+            }
+            
+            async initAudio() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const source = this.audioContext.createMediaStreamSource(stream);
+                    this.analyser = this.audioContext.createAnalyser();
+                    this.analyser.fftSize = 256;
+                    source.connect(this.analyser);
+                    this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+                } catch (err) {
+                    console.log('Audio access denied');
+                }
+            }
+            
+            addRipple(x, y, intensity = 1) {
+                this.ripples.push({
+                    x: x,
+                    y: y,
+                    radius: 0,
+                    maxRadius: 150,
+                    intensity: intensity,
+                    life: 1.0
+                });
+            }
+            
+            update() {
+                this.time += 0.01;
+                
+                // Update ripples
+                this.ripples = this.ripples.filter(ripple => {
+                    ripple.radius += 2;
+                    ripple.life -= 0.02;
+                    return ripple.life > 0 && ripple.radius < ripple.maxRadius;
+                });
+                
+                // Get audio data if enabled
+                if (this.audioEnabled && this.analyser && this.dataArray) {
+                    this.analyser.getByteFrequencyData(this.dataArray);
+                }
+            }
+            
+            draw() {
+                const imageData = this.ctx.createImageData(this.width, this.height);
+                const data = imageData.data;
+                
+                for (let x = 0; x < this.width; x += 2) {
+                    for (let y = 0; y < this.height; y += 2) {
+                        let displacement = 0;
+                        
+                        // Base wave motion
+                        const wave1 = Math.sin(x * 0.01 + this.time) * Math.cos(y * 0.01 + this.time) * 20;
+                        const wave2 = Math.sin(x * 0.02 - this.time * 1.5) * Math.cos(y * 0.015 + this.time * 0.8) * 15;
+                        displacement = wave1 + wave2;
+                        
+                        // Ripple effects
+                        this.ripples.forEach(ripple => {
+                            const dx = x - ripple.x;
+                            const dy = y - ripple.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < ripple.radius && distance > ripple.radius - 20) {
+                                const rippleIntensity = ripple.life * ripple.intensity;
+                                displacement += Math.sin((distance - ripple.radius) * 0.3) * 30 * rippleIntensity;
+                            }
+                        });
+                        
+                        // Audio visualization
+                        if (this.audioEnabled && this.dataArray) {
+                            const audioIndex = Math.floor((x / this.width) * this.dataArray.length);
+                            const audioValue = this.dataArray[audioIndex] || 0;
+                            displacement += (audioValue / 255) * 40 * Math.sin(y * 0.05 + this.time);
+                        }
+                        
+                        // Calculate metallic colors
+                        const metallicIntensity = Math.abs(displacement) / 50;
+                        const hue = 200 + displacement * 2;
+                        const saturation = 30 + metallicIntensity * 20;
+                        const lightness = 40 + metallicIntensity * 30 + Math.sin(this.time + x * 0.01) * 10;
+                        
+                        const rgb = this.hslToRgb(hue / 360, saturation / 100, lightness / 100);
+                        
+                        // Set pixel data
+                        const index = (y * this.width + x) * 4;
+                        data[index] = rgb[0];     // Red
+                        data[index + 1] = rgb[1]; // Green
+                        data[index + 2] = rgb[2]; // Blue
+                        data[index + 3] = 255;    // Alpha
+                        
+                        // Fill 2x2 block for performance
+                        if (x + 1 < this.width) {
+                            data[index + 4] = rgb[0];
+                            data[index + 5] = rgb[1];
+                            data[index + 6] = rgb[2];
+                            data[index + 7] = 255;
+                        }
+                        if (y + 1 < this.height) {
+                            const bottomIndex = ((y + 1) * this.width + x) * 4;
+                            data[bottomIndex] = rgb[0];
+                            data[bottomIndex + 1] = rgb[1];
+                            data[bottomIndex + 2] = rgb[2];
+                            data[bottomIndex + 3] = 255;
+                        }
+                    }
+                }
+                
+                this.ctx.putImageData(imageData, 0, 0);
+                
+                // Add metallic shine overlay
+                const gradient = this.ctx.createLinearGradient(0, 0, this.width, this.height);
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+                gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.05)');
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.width, this.height);
+            }
+            
+            hslToRgb(h, s, l) {
+                let r, g, b;
+                
+                if (s === 0) {
+                    r = g = b = l;
+                } else {
+                    const hue2rgb = (p, q, t) => {
+                        if (t < 0) t += 1;
+                        if (t > 1) t -= 1;
+                        if (t < 1/6) return p + (q - p) * 6 * t;
+                        if (t < 1/2) return q;
+                        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                        return p;
+                    };
+                    
+                    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                    const p = 2 * l - q;
+                    r = hue2rgb(p, q, h + 1/3);
+                    g = hue2rgb(p, q, h);
+                    b = hue2rgb(p, q, h - 1/3);
+                }
+                
+                return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+            }
+        }
+        
+        const canvas = document.getElementById('metalCanvas');
+        const ctx = canvas.getContext('2d');
+        let liquidMetal;
+        let mouseX = 0;
+        let mouseY = 0;
+        let isMouseDown = false;
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if (liquidMetal) {
+                liquidMetal.width = canvas.width;
+                liquidMetal.height = canvas.height;
+            } else {
+                liquidMetal = new LiquidMetal(canvas);
+            }
+        }
+        
+        function animate() {
+            liquidMetal.update();
+            liquidMetal.draw();
+            requestAnimationFrame(animate);
+        }
+        
+        // Event listeners
+        window.addEventListener('resize', resizeCanvas);
+        
+        canvas.addEventListener('mousedown', (e) => {
+            isMouseDown = true;
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            liquidMetal.addRipple(mouseX, mouseY, 2);
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            
+            if (isMouseDown) {
+                liquidMetal.addRipple(mouseX, mouseY, 1);
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            isMouseDown = false;
+        });
+        
+        canvas.addEventListener('click', (e) => {
+            if (!isMouseDown) {
+                liquidMetal.addRipple(e.clientX, e.clientY, 1.5);
+            }
+        });
+        
+        // Touch events
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isMouseDown = true;
+            mouseX = e.touches[0].clientX;
+            mouseY = e.touches[0].clientY;
+            liquidMetal.addRipple(mouseX, mouseY, 2);
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            mouseX = e.touches[0].clientX;
+            mouseY = e.touches[0].clientY;
+            
+            if (isMouseDown) {
+                liquidMetal.addRipple(mouseX, mouseY, 1);
+            }
+        });
+        
+        canvas.addEventListener('touchend', () => {
+            isMouseDown = false;
+        });
+        
+        // Audio toggle
+        document.getElementById('micBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('micBtn');
+            if (!liquidMetal.audioEnabled) {
+                try {
+                    await liquidMetal.initAudio();
+                    liquidMetal.audioEnabled = true;
+                    btn.textContent = '🔇 Disable Audio';
+                    btn.classList.add('active');
+                } catch (err) {
+                    alert('Microphone access denied');
+                }
+            } else {
+                liquidMetal.audioEnabled = false;
+                btn.textContent = '🎤 Enable Audio';
+                btn.classList.remove('active');
+            }
+        });
+        
+        // Initialize
+        resizeCanvas();
+        animate();
+    </script>
+</body>
+</html>

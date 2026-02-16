@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fractal Tree Growth Wallpaper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow: hidden;
+            background: radial-gradient(ellipse at center, #0a0a1a 0%, #000000 100%);
+            font-family: 'Arial', sans-serif;
+        }
+        
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        
+        .info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .controls button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px 0;
+            font-size: 11px;
+            transition: all 0.3s ease;
+            display: block;
+            width: 100%;
+        }
+        
+        .controls button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <div>Click anywhere to grow a fractal tree</div>
+        <div>Hold SHIFT for larger trees</div>
+        <div>Trees grow and sway naturally</div>
+    </div>
+    
+    <div class="controls">
+        <button id="clearBtn">Clear All</button>
+        <button id="autoGrowBtn">Auto Grow</button>
+        <button id="seasonBtn">Change Season</button>
+    </div>
+    
+    <canvas id="treeCanvas"></canvas>
+    
+    <script>
+        class TreeBranch {
+            constructor(startX, startY, angle, length, depth, maxDepth, season) {
+                this.startX = startX;
+                this.startY = startY;
+                this.angle = angle;
+                this.length = length;
+                this.depth = depth;
+                this.maxDepth = maxDepth;
+                this.season = season;
+                
+                this.endX = startX + Math.cos(angle) * length;
+                this.endY = startY + Math.sin(angle) * length;
+                
+                this.children = [];
+                this.growth = 0;
+                this.maxGrowth = 1;
+                this.swayAngle = 0;
+                this.swaySpeed = (Math.random() - 0.5) * 0.02;
+                this.swayAmount = Math.random() * 0.02 + 0.01;
+                
+                this.hue = this.getSeasonHue();
+                this.saturation = 60 + Math.random() * 20;
+                this.lightness = 30 + Math.random() * 20;
+                
+                this.growing = true;
+            }
+            
+            getSeasonHue() {
+                switch (this.season) {
+                    case 'spring': return 120 + Math.random() * 40; // Green
+                    case 'summer': return 100 + Math.random() * 30; // Dark green
+                    case 'autumn': return 15 + Math.random() * 45; // Orange/red
+                    case 'winter': return 200 + Math.random() * 40; // Blue/white
+                    default: return 120 + Math.random() * 40;
+                }
+            }
+            
+            grow() {
+                if (this.growing && this.growth < this.maxGrowth) {
+                    this.growth += 0.02;
+                    
+                    if (this.growth >= 0.3 && this.children.length === 0 && this.depth < this.maxDepth) {
+                        this.branch();
+                    }
+                    
+                    if (this.growth >= this.maxGrowth) {
+                        this.growing = false;
+                    }
+                }
+                
+                // Update sway
+                this.swayAngle += this.swaySpeed;
+                
+                // Grow children
+                this.children.forEach(child => child.grow());
+            }
+            
+            branch() {
+                const branchCount = Math.random() < 0.7 ? 2 : 3;
+                const angleSpread = Math.PI / 3;
+                
+                for (let i = 0; i < branchCount; i++) {
+                    const angleOffset = (i - (branchCount - 1) / 2) * angleSpread / (branchCount - 1);
+                    const newAngle = this.angle + angleOffset + (Math.random() - 0.5) * 0.3;
+                    const newLength = this.length * (0.6 + Math.random() * 0.3);
+                    
+                    this.children.push(new TreeBranch(
+                        this.endX,
+                        this.endY,
+                        newAngle,
+                        newLength,
+                        this.depth + 1,
+                        this.maxDepth,
+                        this.season
+                    ));
+                }
+            }
+            
+            draw(ctx, time) {
+                if (this.growth <= 0) return;
+                
+                ctx.save();
+                
+                // Calculate current end point with growth and sway
+                const currentLength = this.length * this.growth;
+                const swayOffset = Math.sin(time * 0.001 + this.swayAngle) * this.swayAmount * this.depth;
+                const currentAngle = this.angle + swayOffset;
+                
+                const currentEndX = this.startX + Math.cos(currentAngle) * currentLength;
+                const currentEndY = this.startY + Math.sin(currentAngle) * currentLength;
+                
+                // Draw branch
+                const gradient = ctx.createLinearGradient(this.startX, this.startY, currentEndX, currentEndY);
+                const alpha = this.growth * (0.8 - this.depth * 0.1);
+                
+                gradient.addColorStop(0, `hsla(${this.hue}, ${this.saturation}%, ${this.lightness}%, ${alpha})`);
+                gradient.addColorStop(1, `hsla(${this.hue + 20}, ${this.saturation}%, ${this.lightness + 10}%, ${alpha * 0.8})`);
+                
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = Math.max(1, (this.maxDepth - this.depth) * 2);
+                ctx.lineCap = 'round';
+                
+                ctx.beginPath();
+                ctx.moveTo(this.startX, this.startY);
+                ctx.lineTo(currentEndX, currentEndY);
+                ctx.stroke();
+                
+                // Draw leaves on end branches
+                if (this.depth >= this.maxDepth - 1 && this.growth > 0.8) {
+                    this.drawLeaf(ctx, currentEndX, currentEndY, alpha);
+                }
+                
+                ctx.restore();
+                
+                // Draw children
+                this.children.forEach(child => child.draw(ctx, time));
+            }
+            
+            drawLeaf(ctx, x, y, alpha) {
+                const leafSize = Math.random() * 4 + 2;
+                const leafHue = this.season === 'autumn' ? this.hue + Math.random() * 30 : this.hue + 60;
+                
+                ctx.fillStyle = `hsla(${leafHue}, 80%, 60%, ${alpha * 0.6})`;
+                ctx.beginPath();
+                ctx.arc(x, y, leafSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add glow
+                ctx.shadowColor = `hsla(${leafHue}, 80%, 60%, 0.5)`;
+                ctx.shadowBlur = 5;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+        
+        class FractalTree {
+            constructor(startX, startY, season = 'spring') {
+                this.branches = [];
+                this.startX = startX;
+                this.startY = startY;
+                this.season = season;
+                this.time = 0;
+                
+                // Create trunk
+                const trunkLength = 80 + Math.random() * 40;
+                const trunk = new TreeBranch(
+                    startX,
+                    startY,
+                    -Math.PI / 2 + (Math.random() - 0.5) * 0.2,
+                    trunkLength,
+                    0,
+                    6 + Math.floor(Math.random() * 3),
+                    season
+                );
+                
+                this.branches.push(trunk);
+            }
+            
+            grow() {
+                this.time++;
+                this.branches.forEach(branch => branch.grow());
+            }
+            
+            draw(ctx) {
+                this.branches.forEach(branch => branch.draw(ctx, this.time));
+            }
+        }
+        
+        class TreeGarden {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.trees = [];
+                this.seasons = ['spring', 'summer', 'autumn', 'winter'];
+                this.currentSeason = 'spring';
+                this.autoGrow = false;
+                this.autoGrowTimer = 0;
+                
+                this.setupControls();
+            }
+            
+            setupControls() {
+                document.getElementById('clearBtn').addEventListener('click', () => {
+                    this.trees = [];
+                });
+                
+                document.getElementById('autoGrowBtn').addEventListener('click', (e) => {
+                    this.autoGrow = !this.autoGrow;
+                    e.target.textContent = this.autoGrow ? 'Stop Auto' : 'Auto Grow';
+                    e.target.classList.toggle('active');
+                });
+                
+                document.getElementById('seasonBtn').addEventListener('click', (e) => {
+                    const currentIndex = this.seasons.indexOf(this.currentSeason);
+                    this.currentSeason = this.seasons[(currentIndex + 1) % this.seasons.length];
+                    e.target.textContent = `Season: ${this.currentSeason}`;
+                });
+            }
+            
+            addTree(x, y, large = false) {
+                const tree = new FractalTree(
+                    x,
+                    y + (large ? 0 : 20),
+                    this.currentSeason
+                );
+                
+                if (large) {
+                    tree.branches[0].length *= 1.5;
+                    tree.branches[0].maxDepth += 1;
+                }
+                
+                this.trees.push(tree);
+            }
+            
+            update() {
+                this.trees.forEach(tree => tree.grow());
+                
+                // Auto grow new trees
+                if (this.autoGrow) {
+                    this.autoGrowTimer++;
+                    if (this.autoGrowTimer > 180) { // Every 3 seconds
+                        const x = Math.random() * this.canvas.width;
+                        const y = this.canvas.height - Math.random() * 100;
+                        this.addTree(x, y, Math.random() < 0.3);
+                        this.autoGrowTimer = 0;
+                    }
+                }
+            }
+            
+            draw() {
+                // Clear with gradient background
+                const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+                gradient.addColorStop(0, '#0a0a1a');
+                gradient.addColorStop(0.5, '#1a1a2e');
+                gradient.addColorStop(1, '#16213e');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw ground
+                this.ctx.fillStyle = '#0f1419';
+                this.ctx.fillRect(0, this.canvas.height - 50, this.canvas.width, 50);
+                
+                // Draw trees
+                this.trees.forEach(tree => tree.draw(this.ctx));
+            }
+        }
+        
+        const canvas = document.getElementById('treeCanvas');
+        const ctx = canvas.getContext('2d');
+        let treeGarden;
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        function animate() {
+            treeGarden.update();
+            treeGarden.draw();
+            requestAnimationFrame(animate);
+        }
+        
+        // Event listeners
+        window.addEventListener('resize', resizeCanvas);
+        
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const largeTree = e.shiftKey;
+            
+            treeGarden.addTree(x, y, largeTree);
+        });
+        
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const x = e.touches[0].clientX - rect.left;
+            const y = e.touches[0].clientY - rect.top;
+            
+            treeGarden.addTree(x, y, false);
+        });
+        
+        // Initialize
+        resizeCanvas();
+        treeGarden = new TreeGarden(canvas);
+        animate();
+    </script>
+</body>
+</html>

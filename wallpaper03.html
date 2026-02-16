@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geometric Morphing Wallpaper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow: hidden;
+            background: #0a0a0a;
+            font-family: 'Arial', sans-serif;
+            height: 200vh; /* Enable scrolling */
+        }
+        
+        canvas {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+        }
+        
+        .info {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .scroll-indicator {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            z-index: 100;
+        }
+        
+        .scroll-progress {
+            width: 100%;
+            background: linear-gradient(to bottom, #ff6b6b, #4ecdc4, #45b7d1);
+            border-radius: 2px;
+            transition: height 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <div>Scroll to morph patterns</div>
+        <div>Move mouse to interact</div>
+    </div>
+    <div class="scroll-indicator">
+        <div class="scroll-progress" id="scrollProgress"></div>
+    </div>
+    <canvas id="geometricCanvas"></canvas>
+    
+    <script>
+        class GeometricShape {
+            constructor(x, y, size, type) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+                this.type = type;
+                this.rotation = 0;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.02;
+                this.morphPhase = Math.random() * Math.PI * 2;
+                this.hue = Math.random() * 60 + 180; // Blue to purple range
+                this.saturation = Math.random() * 30 + 70;
+                this.lightness = Math.random() * 20 + 40;
+                this.pulse = Math.random() * Math.PI * 2;
+                this.pulseSpeed = Math.random() * 0.03 + 0.01;
+            }
+            
+            update(scrollProgress, mouseX, mouseY) {
+                this.rotation += this.rotationSpeed;
+                this.morphPhase += 0.02;
+                this.pulse += this.pulseSpeed;
+                
+                // Mouse interaction
+                const dx = mouseX - this.x;
+                const dy = mouseY - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 150) {
+                    const force = (150 - distance) / 150;
+                    this.rotationSpeed += (Math.random() - 0.5) * force * 0.01;
+                }
+                
+                // Scroll-based morphing
+                const morphIntensity = Math.sin(scrollProgress * Math.PI * 2 + this.morphPhase);
+                this.currentType = this.type + morphIntensity * 0.5;
+                
+                // Color shifting based on scroll
+                this.hue = (this.hue + scrollProgress * 2) % 360;
+                this.lightness = 40 + Math.sin(this.pulse) * 20 + scrollProgress * 30;
+            }
+            
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                
+                const pulseSize = this.size * (1 + Math.sin(this.pulse) * 0.2);
+                const alpha = 0.6 + Math.sin(this.pulse) * 0.3;
+                
+                ctx.strokeStyle = `hsla(${this.hue}, ${this.saturation}%, ${this.lightness}%, ${alpha})`;
+                ctx.lineWidth = 2;
+                ctx.fillStyle = `hsla(${this.hue}, ${this.saturation}%, ${this.lightness}%, ${alpha * 0.3})`;
+                
+                const sides = Math.floor(Math.abs(this.currentType) % 6) + 3;
+                
+                ctx.beginPath();
+                for (let i = 0; i < sides; i++) {
+                    const angle = (i / sides) * Math.PI * 2;
+                    const x = Math.cos(angle) * pulseSize;
+                    const y = Math.sin(angle) * pulseSize;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                // Inner detail
+                ctx.strokeStyle = `hsla(${this.hue + 30}, ${this.saturation}%, ${this.lightness + 20}%, ${alpha * 0.8})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                for (let i = 0; i < sides; i++) {
+                    const angle = (i / sides) * Math.PI * 2;
+                    const x = Math.cos(angle) * pulseSize * 0.5;
+                    const y = Math.sin(angle) * pulseSize * 0.5;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.closePath();
+                ctx.stroke();
+                
+                ctx.restore();
+            }
+        }
+        
+        class PatternGrid {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.shapes = [];
+                this.scrollProgress = 0;
+                this.mouseX = 0;
+                this.mouseY = 0;
+                
+                this.generateShapes();
+            }
+            
+            generateShapes() {
+                this.shapes = [];
+                const spacing = 120;
+                const offset = 60;
+                
+                for (let x = -offset; x < this.canvas.width + offset; x += spacing) {
+                    for (let y = -offset; y < this.canvas.height + offset; y += spacing) {
+                        const size = Math.random() * 25 + 15;
+                        const type = Math.random() * 5; // 0-5 for different polygon types
+                        this.shapes.push(new GeometricShape(x, y, size, type));
+                    }
+                }
+            }
+            
+            update() {
+                // Update scroll progress
+                this.scrollProgress = window.pageYOffset / (document.body.scrollHeight - window.innerHeight);
+                
+                // Update shapes
+                this.shapes.forEach(shape => {
+                    shape.update(this.scrollProgress, this.mouseX, this.mouseY);
+                });
+                
+                // Update scroll indicator
+                const progressBar = document.getElementById('scrollProgress');
+                progressBar.style.height = `${this.scrollProgress * 100}%`;
+            }
+            
+            draw() {
+                // Clear with gradient background
+                const gradient = this.ctx.createRadialGradient(
+                    this.canvas.width / 2, this.canvas.height / 2, 0,
+                    this.canvas.width / 2, this.canvas.height / 2, Math.max(this.canvas.width, this.canvas.height)
+                );
+                gradient.addColorStop(0, '#1a1a2e');
+                gradient.addColorStop(0.5, '#16213e');
+                gradient.addColorStop(1, '#0f0f23');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw connecting lines between nearby shapes
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                this.ctx.lineWidth = 1;
+                
+                for (let i = 0; i < this.shapes.length; i++) {
+                    for (let j = i + 1; j < this.shapes.length; j++) {
+                        const dx = this.shapes[i].x - this.shapes[j].x;
+                        const dy = this.shapes[i].y - this.shapes[j].y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < 200) {
+                            const alpha = (200 - distance) / 200 * 0.3;
+                            this.ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(this.shapes[i].x, this.shapes[i].y);
+                            this.ctx.lineTo(this.shapes[j].x, this.shapes[j].y);
+                            this.ctx.stroke();
+                        }
+                    }
+                }
+                
+                // Draw shapes
+                this.shapes.forEach(shape => {
+                    shape.draw(this.ctx);
+                });
+            }
+        }
+        
+        const canvas = document.getElementById('geometricCanvas');
+        const ctx = canvas.getContext('2d');
+        let patternGrid;
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if (patternGrid) {
+                patternGrid.generateShapes();
+            }
+        }
+        
+        function animate() {
+            patternGrid.update();
+            patternGrid.draw();
+            requestAnimationFrame(animate);
+        }
+        
+        // Event listeners
+        window.addEventListener('resize', resizeCanvas);
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (patternGrid) {
+                patternGrid.mouseX = e.clientX;
+                patternGrid.mouseY = e.clientY;
+            }
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (patternGrid) {
+                patternGrid.mouseX = e.touches[0].clientX;
+                patternGrid.mouseY = e.touches[0].clientY;
+            }
+        });
+        
+        // Initialize
+        resizeCanvas();
+        patternGrid = new PatternGrid(canvas);
+        animate();
+    </script>
+</body>
+</html>

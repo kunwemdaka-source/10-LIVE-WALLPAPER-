@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crystal Formation Wallpaper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow: hidden;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #000000 100%);
+            font-family: 'Arial', sans-serif;
+        }
+        
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        
+        .info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .controls button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px 0;
+            font-size: 11px;
+            transition: all 0.3s ease;
+            display: block;
+            width: 100%;
+        }
+        
+        .controls button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .controls button.active {
+            background: rgba(100, 200, 255, 0.4);
+            border-color: rgba(100, 200, 255, 0.6);
+        }
+        
+        .temperature {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 10px;
+            z-index: 100;
+        }
+        
+        .temperature-bar {
+            width: 200px;
+            height: 10px;
+            background: linear-gradient(to right, #0066ff, #00ffff, #00ff00, #ffff00, #ff0000);
+            border-radius: 5px;
+            margin: 5px 0;
+            position: relative;
+        }
+        
+        .temperature-indicator {
+            position: absolute;
+            top: -2px;
+            width: 4px;
+            height: 14px;
+            background: white;
+            border-radius: 2px;
+            transition: left 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <div>Crystal Formation</div>
+        <div>Click to grow crystals</div>
+        <div>Hold SHIFT for hot crystals</div>
+        <div>Hold CTRL for cold crystals</div>
+    </div>
+    
+    <div class="controls">
+        <button id="autoGrowBtn">Auto Growth</button>
+        <button id="clearBtn">Clear All</button>
+        <button id="speedBtn">Fast Growth</button>
+    </div>
+    
+    <div class="temperature">
+        <div>Temperature: <span id="tempValue">Normal</span></div>
+        <div class="temperature-bar">
+            <div class="temperature-indicator" id="tempIndicator"></div>
+        </div>
+        <div>Crystals: <span id="crystalCount">0</span></div>
+    </div>
+    
+    <canvas id="crystalCanvas"></canvas>
+    
+    <script>
+        class CrystalStructure {
+            constructor(x, y, temperature = 0.5) {
+                this.x = x;
+                this.y = y;
+                this.temperature = temperature; // 0 = cold, 1 = hot
+                this.branches = [];
+                this.time = 0;
+                this.growthRate = 1;
+                this.maxDepth = 8 + Math.floor(Math.random() * 4);
+                this.baseHue = this.getBaseHue();
+                
+                this.generateBranches();
+            }
+            
+            getBaseHue() {
+                if (this.temperature < 0.3) return 200 + Math.random() * 40; // Cold: blue/cyan
+                if (this.temperature > 0.7) return 0 + Math.random() * 30;   // Hot: red/orange
+                return 180 + Math.random() * 60; // Normal: green/cyan
+            }
+            
+            generateBranches() {
+                // Create main crystal branch
+                const angle = Math.random() * Math.PI * 2;
+                this.branches.push({
+                    x: this.x,
+                    y: this.y,
+                    angle: angle,
+                    length: 0,
+                    maxLength: Math.random() * 40 + 20,
+                    depth: 0,
+                    thickness: Math.random() * 3 + 2,
+                    growth: 0,
+                    children: []
+                });
+            }
+            
+            grow() {
+                this.time += this.growthRate * 0.02;
+                
+                this.branches.forEach(branch => {
+                    this.growBranch(branch);
+                });
+                
+                // Add new branches occasionally
+                if (Math.random() < 0.02 && this.branches.length < 50) {
+                    this.addRandomBranch();
+                }
+            }
+            
+            growBranch(branch) {
+                if (branch.growth < 1) {
+                    branch.growth += 0.02;
+                    branch.length = branch.maxLength * branch.growth;
+                }
+                
+                // Create child branches
+                if (branch.depth < this.maxDepth && branch.growth > 0.5 && branch.children.length === 0) {
+                    const childCount = Math.random() < 0.7 ? 2 : 3;
+                    const angleSpread = Math.PI / 4;
+                    
+                    for (let i = 0; i < childCount; i++) {
+                        const angleOffset = (i - (childCount - 1) / 2) * angleSpread / childCount;
+                        const newAngle = branch.angle + angleOffset + (Math.random() - 0.5) * 0.3;
+                        const newLength = branch.maxLength * (0.6 + Math.random() * 0.3);
+                        
+                        const endX = branch.x + Math.cos(branch.angle) * branch.length;
+                        const endY = branch.y + Math.sin(branch.angle) * branch.length;
+                        
+                        branch.children.push({
+                            x: endX,
+                            y: endY,
+                            angle: newAngle,
+                            length: 0,
+                            maxLength: newLength,
+                            depth: branch.depth + 1,
+                            thickness: branch.thickness * 0.7,
+                            growth: 0,
+                            children: []
+                        });
+                    }
+                }
+                
+                // Grow children
+                branch.children.forEach(child => {
+                    this.growBranch(child);
+                });
+            }
+            
+            addRandomBranch() {
+                const randomBranch = this.branches[Math.floor(Math.random() * this.branches.length)];
+                if (randomBranch.depth < this.maxDepth - 2) {
+                    const endX = randomBranch.x + Math.cos(randomBranch.angle) * randomBranch.length;
+                    const endY = randomBranch.y + Math.sin(randomBranch.angle) * randomBranch.length;
+                    
+                    this.branches.push({
+                        x: endX,
+                        y: endY,
+                        angle: Math.random() * Math.PI * 2,
+                        length: 0,
+                        maxLength: Math.random() * 30 + 15,
+                        depth: randomBranch.depth + 1,
+                        thickness: randomBranch.thickness * 0.8,
+                        growth: 0,
+                        children: []
+                    });
+                }
+            }
+            
+            draw(ctx) {
+                this.drawBranch(ctx, this.branches[0]);
+            }
+            
+            drawBranch(ctx, branch) {
+                if (branch.length <= 0) return;
+                
+                const endX = branch.x + Math.cos(branch.angle) * branch.length;
+                const endY = branch.y + Math.sin(branch.angle) * branch.length;
+                
+                // Calculate color based on temperature and depth
+                const tempOffset = (this.temperature - 0.5) * 60;
+                const depthOffset = branch.depth * 10;
+                const hue = (this.baseHue + tempOffset + depthOffset + this.time * 10) % 360;
+                const saturation = 80 - branch.depth * 5;
+                const lightness = 60 + Math.sin(this.time + branch.depth) * 20;
+                const alpha = 0.8 - branch.depth * 0.05;
+                
+                // Draw main crystal line
+                ctx.strokeStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
+                ctx.lineWidth = Math.max(1, branch.thickness);
+                ctx.lineCap = 'round';
+                
+                ctx.beginPath();
+                ctx.moveTo(branch.x, branch.y);
+                ctx.lineTo(endX, endY);
+                ctx.stroke();
+                
+                // Draw crystal facets
+                if (branch.depth < 3) {
+                    this.drawCrystalFacets(ctx, branch, endX, endY, hue, saturation, lightness, alpha);
+                }
+                
+                // Draw glow effect for hot crystals
+                if (this.temperature > 0.7) {
+                    const glowGradient = ctx.createRadialGradient(
+                        endX, endY, 0,
+                        endX, endY, branch.thickness * 3
+                    );
+                    glowGradient.addColorStop(0, `hsla(${hue}, 100%, 70%, ${alpha * 0.3})`);
+                    glowGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                    
+                    ctx.fillStyle = glowGradient;
+                    ctx.beginPath();
+                    ctx.arc(endX, endY, branch.thickness * 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Draw children
+                branch.children.forEach(child => {
+                    this.drawBranch(ctx, child);
+                });
+            }
+            
+            drawCrystalFacets(ctx, branch, endX, endY, hue, saturation, lightness, alpha) {
+                const facetSize = branch.thickness * 2;
+                const facetAngle = branch.angle + Math.PI / 2;
+                
+                for (let i = 0; i < 3; i++) {
+                    const facetLength = facetSize * (1 - i * 0.3);
+                    const facetX = endX + Math.cos(facetAngle) * facetLength;
+                    const facetY = endY + Math.sin(facetAngle) * facetLength;
+                    
+                    ctx.strokeStyle = `hsla(${hue + i * 20}, ${saturation}%, ${lightness + i * 10}%, ${alpha * 0.7})`;
+                    ctx.lineWidth = Math.max(1, branch.thickness * 0.5);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(endX, endY);
+                    ctx.lineTo(facetX, facetY);
+                    ctx.stroke();
+                }
+            }
+            
+            getBranchCount() {
+                return this.branches.length + this.branches.reduce((count, branch) => {
+                    return count + this.countChildren(branch);
+                }, 0);
+            }
+            
+            countChildren(branch) {
+                return branch.children.length + branch.children.reduce((count, child) => {
+                    return count + this.countChildren(child);
+                }, 0);
+            }
+        }
+        
+        class CrystalGarden {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.crystals = [];
+                this.autoGrow = false;
+                this.fastGrowth = false;
+                this.temperature = 0.5;
+                this.mouseDown = false;
+                this.shiftPressed = false;
+                this.ctrlPressed = false;
+                
+                this.setupControls();
+                this.setupKeyboard();
+            }
+            
+            setupControls() {
+                document.getElementById('autoGrowBtn').addEventListener('click', (e) => {
+                    this.autoGrow = !this.autoGrow;
+                    e.target.classList.toggle('active');
+                    e.target.textContent = this.autoGrow ? 'Stop Auto' : 'Auto Growth';
+                });
+                
+                document.getElementById('clearBtn').addEventListener('click', () => {
+                    this.crystals = [];
+                    this.updateCrystalCount();
+                });
+                
+                document.getElementById('speedBtn').addEventListener('click', (e) => {
+                    this.fastGrowth = !this.fastGrowth;
+                    e.target.classList.toggle('active');
+                    e.target.textContent = this.fastGrowth ? 'Normal Speed' : 'Fast Growth';
+                });
+            }
+            
+            setupKeyboard() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Shift') this.shiftPressed = true;
+                    if (e.key === 'Control') this.ctrlPressed = true;
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    if (e.key === 'Shift') this.shiftPressed = false;
+                    if (e.key === 'Control') this.ctrlPressed = false;
+                });
+            }
+            
+            addCrystal(x, y) {
+                let temperature = 0.5; // Normal
+                
+                if (this.shiftPressed) {
+                    temperature = 0.8 + Math.random() * 0.2; // Hot
+                } else if (this.ctrlPressed) {
+                    temperature = 0.0 + Math.random() * 0.2; // Cold
+                } else {
+                    temperature = 0.3 + Math.random() * 0.4; // Normal variation
+                }
+                
+                const crystal = new CrystalStructure(x, y, temperature);
+                if (this.fastGrowth) {
+                    crystal.growthRate = 3;
+                }
+                this.crystals.push(crystal);
+                this.updateCrystalCount();
+                this.updateTemperature(temperature);
+            }
+            
+            updateTemperature(temp) {
+                this.temperature = temp;
+                let tempLabel = 'Normal';
+                let indicatorPos = '50%';
+                
+                if (temp < 0.3) {
+                    tempLabel = 'Cold';
+                    indicatorPos = '20%';
+                } else if (temp > 0.7) {
+                    tempLabel = 'Hot';
+                    indicatorPos = '80%';
+                }
+                
+                document.getElementById('tempValue').textContent = tempLabel;
+                document.getElementById('tempIndicator').style.left = indicatorPos;
+            }
+            
+            updateCrystalCount() {
+                const totalBranches = this.crystals.reduce((count, crystal) => {
+                    return count + crystal.getBranchCount();
+                }, 0);
+                document.getElementById('crystalCount').textContent = totalBranches;
+            }
+            
+            update() {
+                // Update crystals
+                this.crystals.forEach(crystal => {
+                    crystal.grow();
+                });
+                
+                // Auto grow new crystals
+                if (this.autoGrow && Math.random() < 0.01) {
+                    const x = Math.random() * this.canvas.width;
+                    const y = Math.random() * this.canvas.height;
+                    this.addCrystal(x, y);
+                }
+            }
+            
+            draw() {
+                // Clear with gradient background
+                const gradient = this.ctx.createRadialGradient(
+                    this.canvas.width / 2, this.canvas.height / 2, 0,
+                    this.canvas.width / 2, this.canvas.height / 2, Math.max(this.canvas.width, this.canvas.height)
+                );
+                gradient.addColorStop(0, '#1a1a2e');
+                gradient.addColorStop(0.5, '#16213e');
+                gradient.addColorStop(1, '#0f0f1f');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw crystals
+                this.crystals.forEach(crystal => {
+                    crystal.draw(this.ctx);
+                });
+            }
+        }
+        
+        const canvas = document.getElementById('crystalCanvas');
+        const ctx = canvas.getContext('2d');
+        let crystalGarden;
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        function animate() {
+            crystalGarden.update();
+            crystalGarden.draw();
+            requestAnimationFrame(animate);
+        }
+        
+        // Event listeners
+        window.addEventListener('resize', resizeCanvas);
+        
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            crystalGarden.addCrystal(x, y);
+        });
+        
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const x = e.touches[0].clientX - rect.left;
+            const y = e.touches[0].clientY - rect.top;
+            crystalGarden.addCrystal(x, y);
+        });
+        
+        // Initialize
+        resizeCanvas();
+        crystalGarden = new CrystalGarden(canvas);
+        animate();
+    </script>
+</body>
+</html>

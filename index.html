@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Reactive Wallpapers</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #000000 100%);
+            color: white;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #4ecdc4, #44a08d, #00c9ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.8;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .wallpaper-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            padding: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .wallpaper-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        .wallpaper-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(100, 200, 255, 0.5);
+        }
+        
+        .preview-container {
+            height: 250px;
+            position: relative;
+            overflow: hidden;
+            background: #000;
+        }
+        
+        .preview-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            transform: scale(0.3);
+            transform-origin: top left;
+            pointer-events: none;
+        }
+        
+        .wallpaper-info {
+            padding: 20px;
+        }
+        
+        .wallpaper-info h3 {
+            font-size: 1.4em;
+            margin-bottom: 10px;
+            color: #4ecdc4;
+        }
+        
+        .wallpaper-info p {
+            opacity: 0.8;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .feature-tag {
+            background: rgba(100, 200, 255, 0.2);
+            color: #4ecdc4;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            border: 1px solid rgba(100, 200, 255, 0.3);
+        }
+        
+        .launch-btn {
+            display: inline-block;
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .launch-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.4);
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .footer p {
+            opacity: 0.6;
+        }
+        
+        @media (max-width: 768px) {
+            .wallpaper-grid {
+                grid-template-columns: 1fr;
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Live Reactive Wallpapers</h1>
+        <p>Experience 10 mesmerizing interactive backgrounds that respond to your mouse, keyboard, and touch. Each wallpaper creates unique visual effects with modern web technologies.</p>
+    </div>
+    
+    <div class="wallpaper-grid">
+        <!-- Particle Constellation -->
+        <div class="wallpaper-card">
+            <div class="preview-container">
+                <iframe src="wallpaper01.html" class="preview-iframe"></iframe>
+            </div>
+            <div class="wallpaper-info">
+                <h3>Particle Constellation</h3>
+                <p>Glowing particles that connect and interact with your mouse movement. Creates a dynamic constellation effect with pulsing nodes and connecting lines.</p>
+                <div class="features">
+                    <span class="feature-tag">Mouse Interaction</span>
+                    <span class="feature-tag">Particle Physics</span>
+                    <span class="feature-tag">Real-time Connections</span>
+                </div>
+                <a href="wallpaper01.html" class="launch-btn" target="_blank">Launch Wallpaper</a>
+            </div>
+        </div>
+        
+        <!-- Liquid Metal -->
+        <div class="wallpaper-card">
+            <div class="preview-container">
+                <iframe src="wallpaper02.html" class="preview-iframe"></iframe>
+            </div>
+            <div class="wallpaper-info">
+                <h3>Liquid Metal Displacement</h3>
+                <p>Metallic surface that ripples and flows with mouse interaction. Features audio visualization and dynamic color shifting based on displacement patterns.</p>
+                <div class="features">
+                    <span class="feature-tag">Audio Visualization</span>
+                    <span class="feature-tag">Mouse Ripples</span>
+                    <span class="feature-tag">Metallic Shaders</span>
+                </div>
+                <a href="wallpaper02.html" class="launch-btn" target="_blank">Launch Wallpaper</a>
+            </div>
+        </div>
+        
+        <!-- Geometric Morphing -->
+        <div class="wallpaper-card">
+            <div class="preview-container">
+                <iframe src="wallpaper03.html" class="preview-iframe"></iframe>
+            </div>
+            <div class="wallpaper-info">
+                <h3>Geometric Pattern Morphing</h3>
+                <p>Dynamic geometric shapes that transform based on scroll position and mouse interaction. Features color-shifting polygons with connecting lines.</p>
+                <div class="features">
+                    <span class="feature-tag">Scroll Interaction</span>
+                    <span class="feature-tag">Shape Morphing</span>
+                    <span class="feature-tag">Color Transitions</span>
+                </div>
+                <a href="wallpaper03.html" class="launch-btn" target="_blank">Launch Wallpaper</a>
+            </div>
+        </div>
+        
+        <!-- Aurora Gradient -->
+        <div class="wallpaper-card">
+            <div class="preview-container">
+                <iframe src="wallpaper04.html" class="preview-iframe"></iframe>
+            </div>
+            <div class="wallpaper-info">
+                <h3>Aurora Gradient Flow</h3>
+                <p>Simulates the mesmerizing colors and movement of northern lights. Features wave-based animations with mouse influence and adjustable parameters.</p>
+                <div class="features">
+                    <span class="feature-tag">Wave Animation</span>
+                    <span class="feature-tag">Aurora Simulation</span>
+                    <span class="feature-tag">Real-time Controls</span>
+                </div>
+                <a href="wallpaper04.html" class="launch-btn" target="_blank">Launch Wallpaper</a>
+            </div>
+        </div>
+        
+        <!-- Digital Rain Matrix -->
+        <div class="wallpaper-card">
+            <div class="preview-container">
+                <iframe src="wallpaper05.html" class="preview-iframe"></iframe>
+            </div>
+            <div class="wallpaper-info">
+                <h3>Digital Rain Matrix</h3>
+                <p>Matrix-style digital rain with keyboard interaction. Create custom character streams and trigger burst effects with interactive terminal-like visuals.</p>
+                <div class="features">
+                    <span class="feature-tag">Keyboard Input</span>
+                    <span class="feature-tag">Matrix Effect</span>
+                    <span class="feature-tag">Character Animation</span>
+                </div>
+                <a href="wallpaper05.html" class="launch-btn" target="_blank">Launch Wallpaper</a>
+            </div>
+        </div>
+        
+        <!-- Fractal Tree Growth -->
+        <div class="wallpaper-card">
+            <div class="preview-container">
+                <iframe src="wallpaper06.html" class="preview-iframe"></iframe>
+            </div>
+            <div class="wallpaper-info">
+                <h3>Fractal Tree Growth</h3>
+                <p>Beautiful branching trees that grow from user clicks. Features seasonal color changes, natural swaying motion, and organic growth patterns.</p>
+                <div class="features">
+                    <span class="feature-tag">Click to Grow</span>
+                    <span class="feature-tag">Seasonal Colors</span>
+                    <span class="feature-tag">Natural Physics</span>
+                </div>
+                <a href="wallpaper06.html" class="launch-btn" target="_blank">Launch Wallpaper</a>
+            </div>
+        </div>
+        
+        <!-- Wave Interference -->
+        <div class="wallpaper-card">
+            <div class="preview-container">
+                <iframe src="wallpaper07.html" class="preview-iframe"></iframe>
+            </div>
+            <div class="wallpaper-info">
+                <h3>Wave Interference Patterns</h3>
+                <p>Create mesmerizing interference patterns by moving your mouse. Features real-time wave physics with multiple sources and color-shifting effects.</p>
+                <div class="features">
+                    <span class="feature-tag">Wave Physics</span>
+                    <span class="feature-tag">Interference Patterns</span>
+                    <span class="feature-tag">Multiple Sources</span>
+                </div>
+                <a href="wallpaper07.html" class="launch-btn" target="_blank">Launch Wallpaper</a>
+            </div>
+        </div>
+        
+        <!-- Neural Network -->
+        <div class="wallpaper-card">
+            <div class="preview-container">
+                <iframe src="wallpaper08.html" class="preview-iframe"></iframe>
+            </div>
+            <div class="wallpaper-info">
+                <h3>Neural Network Visualization</h3>
+                <p>Interactive neural network with pulsing connections and signal propagation. Click nodes to activate signals and watch them travel through the network.</p>
+                <div class="features">
+                    <span class="feature-tag">Node Interaction</span>
+                    <span class="feature-tag">Signal Propagation</span>
+                    <span class="feature-tag">Network Physics</span>
+                </div>
+                <a href="wallpaper08.html" class="launch-btn" target="_blank">Launch Wallpaper</a>
+            </div>
+        </div>
+        
+        <!-- Fire and Smoke -->
+        <div class="wallpaper-card">
+            <div class="preview-container">
+                <iframe src="wallpaper09.html" class="preview-iframe"></iframe>
+            </div>
+            <div class="wallpaper-info">
+                <h3>Fire and Smoke Simulation</h3>
+                <p>Realistic fire and smoke effects with particle physics. Click and drag to create fire sources with wind effects, intense modes, and flying embers.</p>
+                <div class="features">
+                    <span class="feature-tag">Particle Physics</span>
+                    <span class="feature-tag">Fire Simulation</span>
+                    <span class="feature-tag">Smoke Effects</span>
+                </div>
+                <a href="wallpaper09.html" class="launch-btn" target="_blank">Launch Wallpaper</a>
+            </div>
+        </div>
+        
+        <!-- Crystal Formation -->
+        <div class="wallpaper-card">
+            <div class="preview-container">
+                <iframe src="wallpaper10.html" class="preview-iframe"></iframe>
+            </div>
+            <div class="wallpaper-info">
+                <h3>Crystal Formation</h3>
+                <p>Beautiful crystalline structures that grow based on temperature. Create hot and cold crystals with different colors and growth patterns.</p>
+                <div class="features">
+                    <span class="feature-tag">Crystal Growth</span>
+                    <span class="feature-tag">Temperature Based</span>
+                    <span class="feature-tag">Fractal Patterns</span>
+                </div>
+                <a href="wallpaper10.html" class="launch-btn" target="_blank">Launch Wallpaper</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>Created with HTML5 Canvas, JavaScript, and modern web technologies. Each wallpaper is fully interactive and responsive.</p>
+    </div>
+    
+    <script>
+        // Auto-resize iframes
+        function resizeIframes() {
+            const iframes = document.querySelectorAll('.preview-iframe');
+            const scale = Math.min(window.innerWidth / 1920, 1);
+            
+            iframes.forEach(iframe => {
+                iframe.style.transform = `scale(${scale * 0.3})`;
+            });
+        }
+        
+        window.addEventListener('resize', resizeIframes);
+        window.addEventListener('load', resizeIframes);
+        
+        // Add loading animation
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.wallpaper-card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(50px)';
+                
+                setTimeout(() => {
+                    card.style.transition = 'all 0.6s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>
